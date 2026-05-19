@@ -29,8 +29,10 @@ namespace Tubifarry.Indexers.DABMusic
                 if (searchResponse == null)
                     return releases;
 
-                IndexerParserHelper.ProcessItems(searchResponse.Albums, CreateAlbumData, releases);
-                IndexerParserHelper.ProcessItems(searchResponse.Tracks, CreateTrackData, releases);
+                IndexerParserHelper.ProcessItems(searchResponse.Albums, CreateAlbumData, releases,
+                    (album, ex) => _logger.Warn(ex, "Skipping malformed DABMusic album {AlbumId}: {AlbumTitle}", album.Id, album.Title));
+                IndexerParserHelper.ProcessItems(searchResponse.Tracks, CreateTrackData, releases,
+                    (track, ex) => _logger.Warn(ex, "Skipping malformed DABMusic track {TrackId}: {TrackTitle}", track.Id, track.Title));
             }
             catch (Exception ex)
             {
@@ -51,8 +53,8 @@ namespace Tubifarry.Indexers.DABMusic
                 ArtistName = album.Artist,
                 InfoUrl = $"https://www.qobuz.com/us-en/album/{SanitizeForUrl(album.Title)}-{SanitizeForUrl(album.Artist)}/{album.Id}",
                 TotalTracks = album.TrackCount > 0 ? album.TrackCount : 1,
-                ReleaseDate = album.ReleaseDate ?? DateTime.Now.Year.ToString(),
-                ReleaseDatePrecision = "day",
+                ReleaseDate = album.ReleaseDate ?? string.Empty,
+                ReleaseDatePrecision = string.IsNullOrWhiteSpace(album.ReleaseDate) ? string.Empty : "day",
                 CustomString = album.Cover!,
                 Codec = format,
                 Bitrate = bitrate,
@@ -73,8 +75,8 @@ namespace Tubifarry.Indexers.DABMusic
                 ArtistName = track.Artist,
                 InfoUrl = $"https://www.qobuz.com/us-en/track/{SanitizeForUrl(track.DisplayAlbum)}-{SanitizeForUrl(track.Artist)}/{track.Id}",
                 TotalTracks = 1,
-                ReleaseDate = track.ReleaseDate ?? DateTime.Now.Year.ToString(),
-                ReleaseDatePrecision = "day",
+                ReleaseDate = track.ReleaseDate ?? string.Empty,
+                ReleaseDatePrecision = string.IsNullOrWhiteSpace(track.ReleaseDate) ? string.Empty : "day",
                 Duration = track.Duration,
                 CustomString = track.Cover ?? track.Images?.Large ?? track.Images?.Thumbnail!,
                 Codec = format,

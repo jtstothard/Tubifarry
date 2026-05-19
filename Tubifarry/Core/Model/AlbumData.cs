@@ -1,5 +1,5 @@
 ﻿using NzbDrone.Core.Parser.Model;
-using System.Text.RegularExpressions;
+using System.Globalization;
 using Tubifarry.Core.Utilities;
 
 namespace Tubifarry.Core.Model
@@ -57,7 +57,7 @@ namespace Tubifarry.Core.Model
             InfoUrl = InfoUrl,
             PublishDate = ReleaseDateTime == DateTime.MinValue ? DateTime.UtcNow : ReleaseDateTime,
             DownloadProtocol = DownloadProtocol,
-            Title = ConstructTitle(),
+            Title = ReleaseTitleFormatter.Format(this),
             Codec = Codec.ToString(),
             Resolution = CoverResolution,
             Source = CustomString,
@@ -68,69 +68,21 @@ namespace Tubifarry.Core.Model
         /// <summary>
         /// Parses the release date based on the precision.
         /// </summary>
-        public void ParseReleaseDate() => ReleaseDateTime = ReleaseDatePrecision switch
+        public void ParseReleaseDate()
         {
-            "year" => new DateTime(int.Parse(ReleaseDate), 1, 1),
-            "month" => DateTime.ParseExact(ReleaseDate, "yyyy-MM", System.Globalization.CultureInfo.InvariantCulture),
-            "day" => DateTime.ParseExact(ReleaseDate, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture),
-            _ => throw new FormatException($"Unsupported release_date_precision: {ReleaseDatePrecision}"),
-        };
-
-        /// <summary>
-        /// Constructs a title string for the album in a format optimized for parsing.
-        /// </summary>
-        /// <returns>A formatted title string.</returns>
-        private string ConstructTitle()
-        {
-            string normalizedAlbumName = NormalizeAlbumName(AlbumName);
-
-            string title = $"{ArtistName} - {normalizedAlbumName}";
-
-            if (ReleaseDateTime != DateTime.MinValue)
-                title += $" ({ReleaseDateTime.Year})";
-
-            if (ExplicitContent)
-                title += " [Explicit]";
-
-            int calculatedBitrate = Bitrate;
-            if (calculatedBitrate <= 0 && Size.HasValue && Duration > 0)
-                calculatedBitrate = (int)(Size.Value * 8 / (Duration * 1000));
-
-            if (AudioFormatHelper.IsLossyFormat(Codec) && calculatedBitrate != 0)
-                title += $" [{Codec} {calculatedBitrate}kbps]";
-            else if (!AudioFormatHelper.IsLossyFormat(Codec) && BitDepth != 0)
-                title += $" [{Codec} {BitDepth}bit]";
-            else
-                title += $" [{Codec}]";
-
-            if (ExtraInfo?.Count > 0)
-                title += string.Concat(ExtraInfo.Where(info => !string.IsNullOrEmpty(info)).Select(info => $" [{info}]"));
-
-            title += " [WEB]";
-            return title;
-        }
-
-        /// <summary>
-        /// Normalizes the album name to handle featuring artists and other parentheses.
-        /// </summary>
-        /// <param name="albumName">The album name to normalize.</param>
-        /// <returns>The normalized album name.</returns>
-        private static string NormalizeAlbumName(string albumName)
-        {
-            if (FeatRegex().IsMatch(albumName)) // TODO ISMatch vs Match
+            if (string.IsNullOrWhiteSpace(ReleaseDate) || string.IsNullOrWhiteSpace(ReleaseDatePrecision))
             {
-                Match match = FeatRegex().Match(albumName);
-                string featuringArtist = albumName[(match.Index + match.Length)..].Trim();
-
-                albumName = $"{albumName[..match.Index].Trim()} (feat. {featuringArtist})";
+                ReleaseDateTime = DateTime.MinValue;
+                return;
             }
-            return FeatReplaceRegex().Replace(albumName, match => $"{{{match.Value.Trim('(', ')')}}}");
+
+            ReleaseDateTime = ReleaseDatePrecision switch
+            {
+                "year" => new DateTime(int.Parse(ReleaseDate, CultureInfo.InvariantCulture), 1, 1),
+                "month" => DateTime.ParseExact(ReleaseDate, "yyyy-MM", CultureInfo.InvariantCulture),
+                "day" => DateTime.ParseExact(ReleaseDate, "yyyy-MM-dd", CultureInfo.InvariantCulture),
+                _ => throw new FormatException($"Unsupported release_date_precision: {ReleaseDatePrecision}"),
+            };
         }
-
-        [GeneratedRegex(@"(?i)\b(feat\.|ft\.|featuring)\b", RegexOptions.IgnoreCase, "de-DE")]
-        private static partial Regex FeatRegex();
-
-        [GeneratedRegex(@"\((?!feat\.)[^)]*\)")]
-        private static partial Regex FeatReplaceRegex();
     }
 }

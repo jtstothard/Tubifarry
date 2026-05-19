@@ -263,19 +263,6 @@ namespace Tubifarry.Download.Clients.SubSonic
 
         private string DetermineTrackExtension(SubSonicSearchSong track)
         {
-            if (!string.IsNullOrEmpty(track.TranscodedSuffix))
-                return track.TranscodedSuffix.StartsWith('.') ? track.TranscodedSuffix : $".{track.TranscodedSuffix}";
-
-            if (!string.IsNullOrEmpty(track.TranscodedContentType))
-            {
-                string codec = track.TranscodedContentType.Contains('/')
-                    ? track.TranscodedContentType.Split('/').Last()
-                    : track.TranscodedContentType;
-                AudioFormat format = AudioFormatHelper.GetAudioFormatFromCodec(codec);
-                if (format != AudioFormat.Unknown)
-                    return AudioFormatHelper.GetFileExtensionForFormat(format);
-            }
-
             if (Options.PreferredFormat != PreferredFormatEnum.Raw)
             {
                 AudioFormat format = Options.PreferredFormat switch

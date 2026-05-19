@@ -127,7 +127,8 @@ public class SubSonicIndexerParser(Logger logger, IHttpClient httpClient) : ISub
         }
 
         _logger.Trace("Processing {Count} songs from search3", songs.Count);
-        IndexerParserHelper.ProcessItems(songs, CreateTrackData, releases);
+        IndexerParserHelper.ProcessItems(songs, CreateTrackData, releases,
+            (song, ex) => _logger.Warn(ex, "Skipping malformed SubSonic song {SongId}: {SongTitle}", song.Id, song.Title));
     }
 
     private SubSonicAlbumFull? FetchFullAlbum(string albumId)
@@ -235,7 +236,7 @@ public class SubSonicIndexerParser(Logger logger, IHttpClient httpClient) : ISub
             InfoUrl = BuildInfoUrl("album", album.Id),
             TotalTracks = album.SongCount > 0 ? album.SongCount : album.Songs.Count,
             ReleaseDate = album.YearString,
-            ReleaseDatePrecision = album.Year.HasValue ? "year" : "day",
+            ReleaseDatePrecision = album.Year.HasValue ? "year" : string.Empty,
             CustomString = album.CoverArt ?? string.Empty,
             Codec = format,
             Bitrate = bitrate,
@@ -277,8 +278,8 @@ public class SubSonicIndexerParser(Logger logger, IHttpClient httpClient) : ISub
             ArtistName = song.Artist,
             InfoUrl = BuildInfoUrl("track", song.Id),
             TotalTracks = 1,
-            ReleaseDate = song.Year?.ToString() ?? DateTime.Now.Year.ToString(),
-            ReleaseDatePrecision = "year",
+            ReleaseDate = song.Year?.ToString() ?? string.Empty,
+            ReleaseDatePrecision = song.Year.HasValue ? "year" : string.Empty,
             Duration = song.Duration,
             CustomString = song.CoverArt ?? string.Empty,
             Codec = format,

@@ -196,9 +196,9 @@ namespace Tubifarry.Indexers.YouTube
             AlbumId = album.Id,
             InfoUrl = $"https://music.youtube.com/playlist?list={album.Id}",
             AlbumName = album.Name,
-            ArtistName = album.Artists.FirstOrDefault()?.Name ?? "Unknown Artist",
-            ReleaseDate = album.ReleaseYear > 0 ? album.ReleaseYear.ToString() : "0000-01-01",
-            ReleaseDatePrecision = "year",
+            ArtistName = album.Artists.FirstOrDefault()?.Name ?? string.Empty,
+            ReleaseDate = album.ReleaseYear > 0 ? album.ReleaseYear.ToString() : string.Empty,
+            ReleaseDatePrecision = album.ReleaseYear > 0 ? "year" : string.Empty,
             CustomString = album.Thumbnails.FirstOrDefault()?.Url ?? string.Empty,
             CoverResolution = album.Thumbnails.FirstOrDefault() is { } thumbnail
                     ? $"{thumbnail.Width}x{thumbnail.Height}"

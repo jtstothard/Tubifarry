@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PluginProject>false</PluginProject>
+    <LidarrProject>false</LidarrProject>
+    <LidarrOutputType>Test</LidarrOutputType>
+    <IsTestProject>true</IsTestProject>
+    <NuGetAudit>false</NuGetAudit>
+    <RollForward>Major</RollForward>
+    <TargetLatestRuntimePatch>false</TargetLatestRuntimePatch>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.10.0" />
+    <PackageReference Include="NUnit" Version="3.14.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="5.1.0" />
+    <PackageReference Include="FluentAssertions" Version="5.10.3" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Tubifarry\Tubifarry.csproj" AdditionalProperties="CI=true;NuGetAudit=false;TreatWarningsAsErrors=false" />
+    <ProjectReference Include="..\..\Submodules\Lidarr\src\NzbDrone.Common\Lidarr.Common.csproj" AdditionalProperties="CI=true;NuGetAudit=false;TreatWarningsAsErrors=false" />
+    <ProjectReference Include="..\..\Submodules\Lidarr\src\NzbDrone.Core\Lidarr.Core.csproj" AdditionalProperties="CI=true;NuGetAudit=false;TreatWarningsAsErrors=false" />
+  </ItemGroup>
+</Project>
