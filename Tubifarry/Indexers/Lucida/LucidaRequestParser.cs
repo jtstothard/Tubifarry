@@ -167,7 +167,7 @@ namespace Tubifarry.Indexers.Lucida
         {
             List<LucidaArtist> artists = album.Artists ?? [];
 
-            string artist = artists.FirstOrDefault()?.Name ?? "Unknown Artist";
+            string artist = artists.FirstOrDefault()?.Name ?? string.Empty;
 
             AlbumData data = new("Lucida", nameof(LucidaDownloadProtocol))
             {
@@ -189,7 +189,7 @@ namespace Tubifarry.Indexers.Lucida
         private AlbumData CreateTrackData(LucidaTrack track, LucidaRequestData rd, AudioFormat format, int bitrate, int bitDepth)
         {
             List<LucidaArtist> artists = track.Artists ?? [];
-            string artist = artists.FirstOrDefault()?.Name ?? "Unknown Artist";
+            string artist = artists.FirstOrDefault()?.Name ?? string.Empty;
             string resolution = string.Empty;
 
             AlbumData data = new("Lucida", nameof(LucidaDownloadProtocol))
@@ -211,10 +211,10 @@ namespace Tubifarry.Indexers.Lucida
 
         private static void ProcessReleaseDate(AlbumData albumData, string? releaseDate)
         {
-            if (string.IsNullOrEmpty(releaseDate))
+            if (string.IsNullOrWhiteSpace(releaseDate))
             {
-                albumData.ReleaseDate = DateTime.Now.Year.ToString();
-                albumData.ReleaseDatePrecision = "year";
+                albumData.ReleaseDate = string.Empty;
+                albumData.ReleaseDatePrecision = string.Empty;
             }
             else if (ReleaseDateDayRegex().IsMatch(releaseDate))
             {
@@ -229,8 +229,8 @@ namespace Tubifarry.Indexers.Lucida
             else
             {
                 Match match = ReleaseDateYear2Regex().Match(releaseDate);
-                albumData.ReleaseDate = match.Success ? match.Groups[1].Value : DateTime.Now.Year.ToString();
-                albumData.ReleaseDatePrecision = "year";
+                albumData.ReleaseDate = match.Success ? match.Groups[1].Value : string.Empty;
+                albumData.ReleaseDatePrecision = match.Success ? "year" : string.Empty;
             }
 
             albumData.ParseReleaseDate();

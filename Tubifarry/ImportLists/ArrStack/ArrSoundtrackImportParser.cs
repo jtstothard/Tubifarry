@@ -77,9 +77,6 @@ namespace Tubifarry.ImportLists.ArrStack
                     if (media == null || string.IsNullOrWhiteSpace(media.Title))
                         continue;
 
-                    if (Settings.OnlyMonitored && media.Monitored != true)
-                        continue;
-
                     if (requiredTagIds != null && !media.Tags.Any(requiredTagIds.Contains))
                         continue;
 

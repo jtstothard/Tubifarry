@@ -177,63 +177,31 @@ namespace Tubifarry.Metadata.Lyrics
 
         private string? ExtractLyricsFromHtml(string html)
         {
-            List<string> lyricsContainers = DataLyricsContainerRegex().Matches(html)
-                .Select(m => m.Groups[1].Value)
-                .Where(v => !string.IsNullOrWhiteSpace(v))
-                .ToList();
+            Match match = DataLyricsContainerRegex().Match(html);
 
-            if (lyricsContainers.Count == 0)
+            if (!match.Success)
+                match = ClassicLyricsClassRegex().Match(html);
+            if (!match.Success)
+                match = LyricsRootIdRegex().Match(html);
+
+            if (match.Success)
             {
-                Match classicMatch = ClassicLyricsClassRegex().Match(html);
-                if (classicMatch.Success)
-                    lyricsContainers.Add(classicMatch.Groups[1].Value);
-            }
+                _logger.Trace("Match found. Processing lyrics HTML...");
+                string lyricsHtml = match.Groups[1].Value;
 
-            if (lyricsContainers.Count == 0)
-            {
-                Match rootMatch = LyricsRootIdRegex().Match(html);
-                if (rootMatch.Success)
-                    lyricsContainers.Add(rootMatch.Groups[1].Value);
-            }
-
-            if (lyricsContainers.Count == 0)
-            {
-                _logger.Debug("No matching lyrics pattern found in HTML");
-                return null;
-            }
-
-            _logger.Trace($"Found {lyricsContainers.Count} potential lyrics container(s). Processing...");
-
-            List<string> validLyricsBlocks = new();
-
-            foreach (string lyricsHtml in lyricsContainers)
-            {
                 string plainLyrics = BrTagRegex().Replace(lyricsHtml, "\n");
                 plainLyrics = ItalicTagRegex().Replace(plainLyrics, "");
                 plainLyrics = BoldTagRegex().Replace(plainLyrics, "");
                 plainLyrics = AnchorTagRegex().Replace(plainLyrics, "");
                 plainLyrics = AllHtmlTagsRegex().Replace(plainLyrics, "");
                 plainLyrics = System.Web.HttpUtility.HtmlDecode(plainLyrics).Trim();
-
-                if (string.IsNullOrWhiteSpace(plainLyrics))
-                    continue;
-
-                if (ContributorsOnlyRegex().IsMatch(plainLyrics))
-                {
-                    _logger.Trace($"Ignoring non-lyrics Genius block: '{plainLyrics}'");
-                    continue;
-                }
-
-                validLyricsBlocks.Add(plainLyrics);
+                return plainLyrics;
             }
-
-            if (validLyricsBlocks.Count == 0)
+            else
             {
-                _logger.Debug("No valid lyrics blocks found in Genius HTML");
+                _logger.Debug("No matching lyrics pattern found in HTML");
                 return null;
             }
-
-            return string.Join("\n", validLyricsBlocks).Trim();
         }
 
         [GeneratedRegex(@"<div[^>]*data-lyrics-container[^>]*>(.*?)<\/div>", RegexOptions.IgnoreCase | RegexOptions.Compiled | RegexOptions.Singleline, "de-DE")]
@@ -259,9 +227,6 @@ namespace Tubifarry.Metadata.Lyrics
 
         [GeneratedRegex(@"<[^>]*>", RegexOptions.Compiled)]
         private static partial Regex AllHtmlTagsRegex();
-
-        [GeneratedRegex(@"^\s*\d[\d.,KkMm]*\s+contributors?\s*$", RegexOptions.Compiled | RegexOptions.IgnoreCase, "de-DE")]
-        private static partial Regex ContributorsOnlyRegex();
 
         #endregion Genius Provider
     }

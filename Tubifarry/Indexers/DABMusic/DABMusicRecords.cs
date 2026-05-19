@@ -64,7 +64,7 @@ namespace Tubifarry.Indexers.DABMusic
         [property: JsonPropertyName("tracks")] List<DABMusicTrack>? Tracks = null)
     {
         [JsonIgnore]
-        public string Year => ReleaseDate?.Length >= 4 ? ReleaseDate[..4] : "Unknown";
+        public string Year => ReleaseDate?.Length >= 4 ? ReleaseDate[..4] : string.Empty;
     }
 
     /// <summary>
@@ -89,7 +89,7 @@ namespace Tubifarry.Indexers.DABMusic
         [property: JsonPropertyName("images")] DABMusicImages? Images = null)
     {
         [JsonIgnore]
-        public string DisplayAlbum => AlbumTitle ?? "Unknown Album";
+        public string DisplayAlbum => AlbumTitle ?? string.Empty;
 
         [JsonIgnore]
         public string DurationFormatted => Duration > 0 ? TimeSpan.FromSeconds(Duration).ToString(@"mm\:ss") : "0:00";

@@ -9,6 +9,7 @@ using Requests;
 using Requests.Options;
 using System.Text;
 using System.Text.RegularExpressions;
+using Tubifarry.Core.Records;
 using Tubifarry.Core.Utilities;
 
 namespace Tubifarry.Download.Base
@@ -181,6 +182,64 @@ namespace Tubifarry.Download.Base
         /// Builds a track filename using the release formatter
         /// </summary>
         protected string BuildTrackFilename(Track track, Album album, string extension = ".flac") => _releaseFormatter.BuildTrackFilename(null, track, album) + extension;
+
+        /// <summary>
+        /// Extracts MusicBrainz IDs from Lidarr's RemoteAlbum object.
+        /// The MBIDs come from Lidarr's own database — Lidarr already matched
+        /// this download to a specific release. If that match was correct, the
+        /// MBIDs are correct. If it was wrong, the download itself is wrong
+        /// regardless of what tags we write.
+        /// Returns null if RemoteAlbum is incomplete or MBIDs are not available.
+        /// </summary>
+        protected MusicBrainzIds? ExtractMusicBrainzIds()
+        {
+            if (_remoteAlbum == null || _remoteAlbum.Artist == null ||
+                _remoteAlbum.Albums == null || !_remoteAlbum.Albums.Any())
+            {
+                return null;
+            }
+
+            var album = _remoteAlbum.Albums[0];
+            var monitoredRelease = album.AlbumReleases?.Value?.FirstOrDefault(r => r.Monitored);
+
+            if (monitoredRelease == null)
+            {
+                // Return partial MBIDs (album-level only)
+                return new MusicBrainzIds
+                {
+                    ArtistId = _remoteAlbum.Artist.ForeignArtistId,
+                    ReleaseGroupId = album.ForeignAlbumId,
+                    ReleaseId = null,
+                    ReleaseArtistId = null,
+                    TrackRecordingIds = null
+                };
+            }
+
+            Dictionary<int, string>? trackRecordingIds = null;
+            var tracks = monitoredRelease.Tracks?.Value;
+            if (tracks != null && tracks.Any())
+            {
+                trackRecordingIds = new Dictionary<int, string>();
+                foreach (var track in tracks)
+                {
+                    if (track.AbsoluteTrackNumber > 0 &&
+                        !string.IsNullOrEmpty(track.ForeignRecordingId))
+                    {
+                        trackRecordingIds[track.AbsoluteTrackNumber] =
+                            track.ForeignRecordingId;
+                    }
+                }
+            }
+
+            return new MusicBrainzIds
+            {
+                ArtistId = _remoteAlbum.Artist.ForeignArtistId,
+                ReleaseGroupId = album.ForeignAlbumId,
+                ReleaseId = monitoredRelease.ForeignReleaseId,
+                ReleaseArtistId = album.Artist?.Value?.ForeignArtistId,
+                TrackRecordingIds = trackRecordingIds
+            };
+        }
 
         public override void Start() => throw new NotImplementedException();
 

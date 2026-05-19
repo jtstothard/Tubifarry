@@ -72,7 +72,7 @@ namespace Tubifarry.Indexers.SubSonic
         [property: JsonPropertyName("genre")] string? Genre = null)
     {
         [JsonIgnore]
-        public string YearString => Year?.ToString() ?? Created?.Year.ToString() ?? DateTime.Now.Year.ToString();
+        public string YearString => Year?.ToString() ?? string.Empty;
     }
 
     /// <summary>
@@ -92,7 +92,7 @@ namespace Tubifarry.Indexers.SubSonic
         [property: JsonPropertyName("song")] List<SubSonicSearchSong>? Songs)
     {
         [JsonIgnore]
-        public string YearString => Year?.ToString() ?? Created?.Year.ToString() ?? DateTime.Now.Year.ToString();
+        public string YearString => Year?.ToString() ?? string.Empty;
     }
 
     /// <summary>
@@ -136,11 +136,9 @@ namespace Tubifarry.Indexers.SubSonic
         [property: JsonPropertyName("size")] long Size = 0,
         [property: JsonPropertyName("suffix")] string? Suffix = null,
         [property: JsonPropertyName("contentType")] string? ContentType = null,
-        [property: JsonPropertyName("transcodedSuffix")] string? TranscodedSuffix = null,
-        [property: JsonPropertyName("transcodedContentType")] string? TranscodedContentType = null,
         [property: JsonPropertyName("path")] string? Path = null)
     {
         [JsonIgnore]
-        public string DisplayAlbum => Album ?? "Unknown Album";
+        public string DisplayAlbum => Album ?? string.Empty;
     }
 }

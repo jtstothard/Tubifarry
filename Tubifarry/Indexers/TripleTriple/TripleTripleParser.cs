@@ -17,15 +17,12 @@ namespace Tubifarry.Indexers.TripleTriple
             try
             {
                 bool isSingle = false;
-                TripleTripleCodec codec = TripleTripleCodec.FLAC;
                 if (!string.IsNullOrEmpty(indexerResponse.Request.HttpRequest.ContentSummary))
                 {
                     TripleTripleRequestData? requestData = JsonSerializer.Deserialize<TripleTripleRequestData>(
                         indexerResponse.Request.HttpRequest.ContentSummary,
                         IndexerParserHelper.StandardJsonOptions);
                     isSingle = requestData?.IsSingle ?? false;
-                    if (requestData?.Codec != null && Enum.TryParse(requestData.Codec, true, out TripleTripleCodec parsed))
-                        codec = parsed;
                 }
 
                 TripleTripleSearchResponse? response = JsonSerializer.Deserialize<TripleTripleSearchResponse>(
@@ -49,17 +46,24 @@ namespace Tubifarry.Indexers.TripleTriple
                         if (document == null)
                             continue;
 
-                        if (document.IsAlbum)
+                        try
                         {
-                            AlbumData albumData = CreateAlbumRelease(document, codec);
-                            albumData.ParseReleaseDate();
-                            releases.Add(albumData.ToReleaseInfo());
+                            if (document.IsAlbum)
+                            {
+                                AlbumData albumData = CreateAlbumRelease(document);
+                                albumData.ParseReleaseDate();
+                                releases.Add(albumData.ToReleaseInfo());
+                            }
+                            else if (document.IsTrack && isSingle)
+                            {
+                                AlbumData trackData = CreateTrackRelease(document);
+                                trackData.ParseReleaseDate();
+                                releases.Add(trackData.ToReleaseInfo());
+                            }
                         }
-                        else if (document.IsTrack && isSingle)
+                        catch (Exception ex)
                         {
-                            AlbumData trackData = CreateTrackRelease(document, codec);
-                            trackData.ParseReleaseDate();
-                            releases.Add(trackData.ToReleaseInfo());
+                            logger.Warn(ex, "Skipping malformed TripleTriple item {Asin}: {Title}", document.Asin, document.Title);
                         }
                     }
                 }
@@ -72,9 +76,9 @@ namespace Tubifarry.Indexers.TripleTriple
             return releases;
         }
 
-        private AlbumData CreateAlbumRelease(TripleTripleDocument album, TripleTripleCodec codec)
+        private AlbumData CreateAlbumRelease(TripleTripleDocument album)
         {
-            (AudioFormat format, int bitrate, int bitDepth) = GetQualityForCodec(codec);
+            (AudioFormat format, int bitrate, int bitDepth) = GetQualityForCodec(TripleTripleCodec.FLAC);
             int trackCount = album.TrackNum > 0 ? album.TrackNum : 10;
             long estimatedSize = IndexerParserHelper.EstimateSize(0, 0, bitrate, trackCount);
 
@@ -85,10 +89,8 @@ namespace Tubifarry.Indexers.TripleTriple
                 ArtistName = album.ArtistName,
                 InfoUrl = $"https://music.amazon.com/albums/{album.Asin}",
                 TotalTracks = trackCount,
-                ReleaseDate = album.OriginalReleaseDate.HasValue && album.OriginalReleaseDate.Value > 0
-                    ? DateTimeOffset.FromUnixTimeSeconds(album.OriginalReleaseDate.Value).ToString("yyyy-MM-dd")
-                    : DateTime.Now.Year.ToString(),
-                ReleaseDatePrecision = album.OriginalReleaseDate.HasValue && album.OriginalReleaseDate.Value > 0 ? "day" : "year",
+                ReleaseDate = FormatReleaseDate(album.OriginalReleaseDate),
+                ReleaseDatePrecision = HasReleaseDate(album.OriginalReleaseDate) ? "day" : string.Empty,
                 CustomString = album.ArtOriginal?.Url ?? album.ArtOriginal?.ArtUrl ?? string.Empty,
                 Codec = format,
                 Bitrate = bitrate,
@@ -97,9 +99,9 @@ namespace Tubifarry.Indexers.TripleTriple
             };
         }
 
-        private AlbumData CreateTrackRelease(TripleTripleDocument track, TripleTripleCodec codec)
+        private AlbumData CreateTrackRelease(TripleTripleDocument track)
         {
-            (AudioFormat format, int bitrate, int bitDepth) = GetQualityForCodec(codec);
+            (AudioFormat format, int bitrate, int bitDepth) = GetQualityForCodec(TripleTripleCodec.FLAC);
             long estimatedSize = IndexerParserHelper.EstimateSize(0, track.Duration, bitrate);
 
             return new("TripleTriple", nameof(AmazonMusicDownloadProtocol))
@@ -109,10 +111,8 @@ namespace Tubifarry.Indexers.TripleTriple
                 ArtistName = track.ArtistName,
                 InfoUrl = $"https://music.amazon.com/tracks/{track.Asin}",
                 TotalTracks = 1,
-                ReleaseDate = track.OriginalReleaseDate.HasValue && track.OriginalReleaseDate.Value > 0
-                    ? DateTimeOffset.FromUnixTimeSeconds(track.OriginalReleaseDate.Value).ToString("yyyy-MM-dd")
-                    : DateTime.Now.Year.ToString(),
-                ReleaseDatePrecision = track.OriginalReleaseDate.HasValue && track.OriginalReleaseDate.Value > 0 ? "day" : "year",
+                ReleaseDate = FormatReleaseDate(track.OriginalReleaseDate),
+                ReleaseDatePrecision = HasReleaseDate(track.OriginalReleaseDate) ? "day" : string.Empty,
                 Duration = track.Duration,
                 CustomString = track.ArtOriginal?.Url ?? track.ArtOriginal?.ArtUrl ?? string.Empty,
                 Codec = format,
@@ -121,6 +121,12 @@ namespace Tubifarry.Indexers.TripleTriple
                 Size = estimatedSize
             };
         }
+
+        private static bool HasReleaseDate(long? unixSeconds) => unixSeconds.HasValue && unixSeconds.Value > 0;
+
+        private static string FormatReleaseDate(long? unixSeconds) => HasReleaseDate(unixSeconds)
+            ? DateTimeOffset.FromUnixTimeSeconds(unixSeconds!.Value).ToString("yyyy-MM-dd")
+            : string.Empty;
 
         private static (AudioFormat Format, int Bitrate, int BitDepth) GetQualityForCodec(TripleTripleCodec codec) => codec switch
         {

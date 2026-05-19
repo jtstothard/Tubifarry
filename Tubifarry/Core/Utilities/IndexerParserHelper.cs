@@ -31,16 +31,24 @@ namespace Tubifarry.Core.Utilities
         public static void ProcessItems<T>(
             IList<T>? items,
             Func<T, AlbumData> createData,
-            List<ReleaseInfo> releases)
+            List<ReleaseInfo> releases,
+            Action<T, Exception>? onItemError = null)
         {
             if ((items?.Count ?? 0) <= 0)
                 return;
 
             foreach (T item in items!)
             {
-                AlbumData data = createData(item);
-                data.ParseReleaseDate();
-                releases.Add(data.ToReleaseInfo());
+                try
+                {
+                    AlbumData data = createData(item);
+                    data.ParseReleaseDate();
+                    releases.Add(data.ToReleaseInfo());
+                }
+                catch (Exception ex)
+                {
+                    onItemError?.Invoke(item, ex);
+                }
             }
         }
 
